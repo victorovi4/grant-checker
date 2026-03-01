@@ -51,7 +51,7 @@ def test_models_endpoint():
     assert isinstance(data["anthropic"], list)
     assert isinstance(data["yandex"], list)
     assert "claude-sonnet-4-6" in data["anthropic"]
-    assert "yandexgpt-latest" in data["yandex"]
+    assert "yandexgpt/latest" in data["yandex"]
 
 
 # ---------------------------------------------------------------------------
@@ -137,10 +137,10 @@ def test_verify_with_explicit_provider_and_model():
         response = client.post("/verify", json={
             "text": "Тестовый текст",
             "provider": "yandex",
-            "model": "yandexgpt-latest",
+            "model": "yandexgpt/latest",
         })
 
     assert response.status_code == 200
     mock_yandex.assert_called_once()
     call_args = mock_yandex.call_args
-    assert call_args.args[1] == "yandexgpt-latest"
+    assert call_args.args[1] == "yandexgpt/latest"

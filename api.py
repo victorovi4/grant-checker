@@ -23,7 +23,7 @@ app.add_middleware(
 
 AVAILABLE_MODELS = {
     "anthropic": ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
-    "yandex": ["yandexgpt-latest"],
+    "yandex": ["yandexgpt/latest", "yandexgpt-lite/latest"],
 }
 
 

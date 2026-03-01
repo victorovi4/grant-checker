@@ -199,7 +199,7 @@ class TestVerifyGrantTextYandex:
         mock_yandex_gpt.set_response(response_text)
 
         report = await verify_grant_text(
-            "Текст заявки", provider="yandex", model="yandexgpt-latest"
+            "Текст заявки", provider="yandex", model="yandexgpt/latest"
         )
 
         assert isinstance(report, VerificationReport)

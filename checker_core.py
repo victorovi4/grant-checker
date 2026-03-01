@@ -124,7 +124,7 @@ async def _call_yandex_gpt(text: str, model: str, system_prompt: str) -> str:
         "completionOptions": {
             "stream": False,
             "temperature": 0.3,
-            "maxTokens": 4096,
+            "maxTokens": "4096",
         },
         "messages": [
             {"role": "system", "text": system_prompt},
@@ -141,7 +141,10 @@ async def _call_yandex_gpt(text: str, model: str, system_prompt: str) -> str:
             },
             json=payload,
         )
-        response.raise_for_status()
+        if not response.is_success:
+            raise RuntimeError(
+                f"YandexGPT API error {response.status_code}: {response.text}"
+            )
         data = response.json()
         return data["result"]["alternatives"][0]["message"]["text"]
 

@@ -158,25 +158,25 @@
         <h1>GrantChecker &mdash; проверка грантовой заявки</h1>
 
         <div class="model-selector">
-            <select id="provider" onchange="onProviderChange()">
+            <select id="provider" data-testid="provider-select" onchange="onProviderChange()">
                 <option value="anthropic">Anthropic</option>
                 <option value="yandex">YandexGPT</option>
             </select>
-            <select id="model">
+            <select id="model" data-testid="model-select">
                 <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
                 <option value="claude-opus-4-6">claude-opus-4-6</option>
                 <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001</option>
             </select>
         </div>
 
-        <textarea id="input" placeholder="Вставьте текст раздела заявки для проверки"></textarea>
-        <button id="btn" onclick="runCheck()">Проверить</button>
+        <textarea id="input" data-testid="text-input" placeholder="Вставьте текст раздела заявки для проверки"></textarea>
+        <button id="btn" data-testid="submit-btn" onclick="runCheck()">Проверить</button>
 
-        <div class="loader" id="loader">
+        <div class="loader" id="loader" data-testid="loader">
             <span class="spinner"></span> Проверяем текст, это может занять около минуты...
         </div>
 
-        <div id="results"></div>
+        <div id="results" data-testid="results"></div>
     </div>
 
     <script>
