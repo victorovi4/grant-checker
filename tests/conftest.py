@@ -62,3 +62,26 @@ def mock_anthropic():
         helper.mock_client = mock_instance
 
         yield helper
+
+
+@pytest.fixture()
+def mock_yandex_gpt():
+    """Patch checker_core._call_yandex_gpt so no real API call is made.
+
+    Yields a helper object with:
+        - set_response(text): configure what the mock returns
+    """
+
+    class _Helper:
+        def __init__(self):
+            self.response_text = ""
+            self._mock = AsyncMock(return_value="")
+
+        def set_response(self, text: str):
+            self.response_text = text
+            self._mock.return_value = text
+
+    helper = _Helper()
+
+    with patch("checker_core._call_yandex_gpt", helper._mock):
+        yield helper

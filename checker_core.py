@@ -1,9 +1,11 @@
 import os
 import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import anthropic
+import httpx
 
 
 @dataclass
@@ -91,16 +93,72 @@ def _parse_response(text: str) -> VerificationReport:
     return report
 
 
-async def verify_grant_text(text: str) -> VerificationReport:
-    client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+def _get_yandex_iam_token() -> str:
+    """Return IAM token from env or generate via yc CLI."""
+    token = os.getenv("YANDEX_IAM_TOKEN", "")
+    if token:
+        return token
+    result = subprocess.run(
+        ["yc", "iam", "create-token"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+async def _call_yandex_gpt(text: str, model: str, system_prompt: str) -> str:
+    """Call YandexGPT API and return the response text."""
+    folder_id = os.getenv("YANDEX_FOLDER_ID", "")
+    iam_token = _get_yandex_iam_token()
+
+    model_uri = f"gpt://{folder_id}/{model}"
+    payload = {
+        "modelUri": model_uri,
+        "completionOptions": {
+            "stream": False,
+            "temperature": 0.3,
+            "maxTokens": 4096,
+        },
+        "messages": [
+            {"role": "system", "text": system_prompt},
+            {"role": "user", "text": text},
+        ],
+    }
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(
+            "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+            headers={
+                "Authorization": f"Bearer {iam_token}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["result"]["alternatives"][0]["message"]["text"]
+
+
+async def verify_grant_text(
+    text: str,
+    provider: str = "anthropic",
+    model: str = "claude-sonnet-4-6",
+) -> VerificationReport:
     system_prompt = load_system_prompt()
 
-    message = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
-        system=system_prompt,
-        messages=[{"role": "user", "content": text}],
-    )
+    if provider == "anthropic":
+        client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        message = await client.messages.create(
+            model=model,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = message.content[0].text
+    elif provider == "yandex":
+        raw = await _call_yandex_gpt(text, model, system_prompt)
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
 
-    raw = message.content[0].text
     return _parse_response(raw)

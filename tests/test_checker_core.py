@@ -142,7 +142,7 @@ class TestLoadSystemPrompt:
 
 
 # ---------------------------------------------------------------------------
-# verify_grant_text (async, with mock)
+# verify_grant_text — Anthropic (async, with mock)
 # ---------------------------------------------------------------------------
 
 class TestVerifyGrantText:
@@ -177,3 +177,39 @@ class TestVerifyGrantText:
         report = await verify_grant_text("Текст")
 
         assert report.raw_response == raw
+
+
+# ---------------------------------------------------------------------------
+# verify_grant_text — YandexGPT (async, with mock)
+# ---------------------------------------------------------------------------
+
+class TestVerifyGrantTextYandex:
+    @pytest.mark.asyncio
+    async def test_verify_grant_text_with_yandex(self, mock_yandex_gpt):
+        """verify_grant_text with yandex provider returns VerificationReport."""
+        response_text = make_llm_response({
+            "Критические ошибки": [
+                '**Цитата:** "Данные" | **Проблема:** Не подтверждено | **Рекомендация:** Уточнить'
+            ],
+            "Существенные замечания": [],
+            "Незначительные замечания": [],
+            "Подтверждённые факты": [],
+            "Требует ручной проверки": [],
+        })
+        mock_yandex_gpt.set_response(response_text)
+
+        report = await verify_grant_text(
+            "Текст заявки", provider="yandex", model="yandexgpt-latest"
+        )
+
+        assert isinstance(report, VerificationReport)
+        assert len(report.critical) == 1
+        assert report.critical[0].quote == "Данные"
+        assert report.critical[0].issue == "Не подтверждено"
+        assert report.critical[0].recommendation == "Уточнить"
+
+    @pytest.mark.asyncio
+    async def test_verify_grant_text_unknown_provider(self):
+        """verify_grant_text raises ValueError for unknown provider."""
+        with pytest.raises(ValueError, match="Unknown provider"):
+            await verify_grant_text("Текст", provider="unknown_llm")

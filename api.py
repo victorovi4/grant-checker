@@ -21,15 +21,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+AVAILABLE_MODELS = {
+    "anthropic": ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
+    "yandex": ["yandexgpt-latest"],
+}
+
 
 class VerifyRequest(BaseModel):
     text: str
+    provider: str = "anthropic"
+    model: str = "claude-sonnet-4-6"
 
 
 @app.post("/verify")
 async def verify(req: VerifyRequest):
-    report = await verify_grant_text(req.text)
+    report = await verify_grant_text(req.text, req.provider, req.model)
     return asdict(report)
+
+
+@app.get("/models")
+async def models():
+    return AVAILABLE_MODELS
 
 
 @app.get("/health")
