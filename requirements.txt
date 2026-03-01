@@ -3,5 +3,6 @@ uvicorn[standard]
 anthropic
 python-dotenv
 httpx
+python-docx
 pytest
 pytest-asyncio

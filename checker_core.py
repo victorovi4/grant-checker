@@ -36,8 +36,13 @@ STUB_SYSTEM_PROMPT = (
 )
 
 
-def load_system_prompt() -> str:
-    path = Path(__file__).parent / "system_prompt.md"
+def load_system_prompt(provider: str = "anthropic") -> str:
+    base = Path(__file__).parent
+    if provider == "yandex":
+        yandex_path = base / "system_prompt_yandex.md"
+        if yandex_path.exists():
+            return yandex_path.read_text(encoding="utf-8")
+    path = base / "system_prompt.md"
     if path.exists():
         return path.read_text(encoding="utf-8")
     return STUB_SYSTEM_PROMPT
@@ -123,7 +128,7 @@ async def _call_yandex_gpt(text: str, model: str, system_prompt: str) -> str:
         "modelUri": model_uri,
         "completionOptions": {
             "stream": False,
-            "temperature": 0.3,
+            "temperature": 0.6,
             "maxTokens": "4096",
         },
         "messages": [
@@ -154,7 +159,7 @@ async def verify_grant_text(
     provider: str = "anthropic",
     model: str = "claude-sonnet-4-6",
 ) -> VerificationReport:
-    system_prompt = load_system_prompt()
+    system_prompt = load_system_prompt(provider)
 
     if provider == "anthropic":
         client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))

@@ -144,3 +144,40 @@ def test_verify_with_explicit_provider_and_model():
     mock_yandex.assert_called_once()
     call_args = mock_yandex.call_args
     assert call_args.args[1] == "yandexgpt/latest"
+
+
+# ---------------------------------------------------------------------------
+# POST /export/docx
+# ---------------------------------------------------------------------------
+
+def test_export_docx_returns_file():
+    """POST /export/docx returns a valid DOCX file with correct content-type."""
+    payload = {
+        "text": "Тестовый текст заявки для экспорта.",
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-6",
+        "report": {
+            "critical": [{"quote": "Рост на 300%", "issue": "Данные не подтверждены", "recommendation": "Указать источник"}],
+            "significant": [],
+            "minor": [],
+            "confirmed": [{"quote": "Факт проверен", "issue": "проверено", "recommendation": "источник подтверждён"}],
+            "needs_manual": [],
+        },
+    }
+    response = client.post("/export/docx", json=payload)
+    assert response.status_code == 200
+    assert "wordprocessingml" in response.headers["content-type"]
+    assert len(response.content) > 1000  # non-empty DOCX
+
+def test_export_docx_empty_report():
+    """POST /export/docx with all-empty sections still returns a valid DOCX."""
+    payload = {
+        "text": "Короткий текст.",
+        "report": {
+            "critical": [], "significant": [], "minor": [],
+            "confirmed": [], "needs_manual": [],
+        },
+    }
+    response = client.post("/export/docx", json=payload)
+    assert response.status_code == 200
+    assert len(response.content) > 500

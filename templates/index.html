@@ -130,6 +130,53 @@
             font-size: 0.9rem;
         }
 
+        .export-bar {
+            display: none;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .export-bar.visible { display: flex; }
+
+        .export-bar button {
+            margin-top: 0;
+            padding: 9px 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: #6c757d;
+        }
+
+        .export-bar button:hover { background: #5a6268; }
+
+        .export-bar .btn-pdf  { background: #c0392b; }
+        .export-bar .btn-pdf:hover { background: #a93226; }
+        .export-bar .btn-docx { background: #1a5276; }
+        .export-bar .btn-docx:hover { background: #154360; }
+
+        /* ---------- Print styles ---------- */
+        @media print {
+            .model-selector, textarea, #btn, .loader, .export-bar { display: none !important; }
+            .print-header { display: block !important; }
+            body { background: white; }
+            .container { padding: 0; }
+            .section { break-inside: avoid; }
+        }
+
+        .print-header {
+            display: none;
+            margin-bottom: 24px;
+        }
+
+        .print-original {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-left: 3px solid #ccc;
+            font-size: 0.88rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
         .model-selector {
             display: flex;
             gap: 10px;
@@ -176,11 +223,26 @@
             <span class="spinner"></span> Проверяем текст, это может занять около минуты...
         </div>
 
+        <!-- Shown only during print -->
+        <div class="print-header">
+            <h2>GrantChecker — Отчёт о проверке</h2>
+            <div id="print-meta" style="color:#666;font-size:0.9rem;margin:8px 0 16px"></div>
+            <div style="font-weight:600;margin-bottom:6px">Исходный текст:</div>
+            <div id="print-original" class="print-original"></div>
+        </div>
+
         <div id="results" data-testid="results"></div>
+
+        <div class="export-bar" id="export-bar">
+            <button class="btn-pdf" data-testid="export-pdf-btn" onclick="exportPdf()">Скачать PDF</button>
+            <button class="btn-docx" data-testid="export-docx-btn" onclick="exportDocx()">Скачать DOCX</button>
+        </div>
     </div>
 
     <script>
         let modelsCache = null;
+        let currentReport = null;
+        let currentText = '';
 
         async function loadModels() {
             if (modelsCache) return modelsCache;
@@ -229,12 +291,57 @@
                 if (!resp.ok) throw new Error('Server error: ' + resp.status);
 
                 const data = await resp.json();
+                currentReport = data;
+                currentText = text;
                 renderResults(data);
+                showExportBar();
             } catch (e) {
                 results.innerHTML = '<p style="color:red;">Ошибка: ' + escapeHtml(e.message) + '</p>';
             } finally {
                 btn.disabled = false;
                 loader.classList.remove('active');
+            }
+        }
+
+        function showExportBar() {
+            document.getElementById('export-bar').classList.add('visible');
+            // Prepare print header
+            const provider = document.getElementById('provider').value;
+            const model = document.getElementById('model').value;
+            document.getElementById('print-meta').textContent =
+                new Date().toLocaleString('ru-RU') + '   ' + provider + ' / ' + model;
+            document.getElementById('print-original').textContent = currentText;
+        }
+
+        function exportPdf() {
+            window.print();
+        }
+
+        async function exportDocx() {
+            const provider = document.getElementById('provider').value;
+            const model = document.getElementById('model').value;
+            const btn = document.querySelector('.btn-docx');
+            btn.disabled = true;
+            btn.textContent = 'Создаём DOCX…';
+            try {
+                const resp = await fetch('/export/docx', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: currentText, report: currentReport, provider, model })
+                });
+                if (!resp.ok) throw new Error('Ошибка сервера: ' + resp.status);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'grantchecker_' + new Date().toISOString().slice(0,10) + '.docx';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch(e) {
+                alert('Ошибка при создании DOCX: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Скачать DOCX';
             }
         }
 
