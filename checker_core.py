@@ -94,17 +94,23 @@ def _parse_response(text: str) -> VerificationReport:
 
 
 def _get_yandex_iam_token() -> str:
-    """Return IAM token from env or generate via yc CLI."""
+    """Return IAM token from env or generate via yc CLI (local dev only)."""
     token = os.getenv("YANDEX_IAM_TOKEN", "")
     if token:
         return token
-    result = subprocess.run(
-        ["yc", "iam", "create-token"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return result.stdout.strip()
+    try:
+        result = subprocess.run(
+            ["yc", "iam", "create-token"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except FileNotFoundError:
+        raise RuntimeError(
+            "YANDEX_IAM_TOKEN не задан, а yc CLI не найден. "
+            "Установите переменную окружения YANDEX_IAM_TOKEN."
+        )
 
 
 async def _call_yandex_gpt(text: str, model: str, system_prompt: str) -> str:
